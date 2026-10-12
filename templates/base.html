@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}CaneMart - Sugarcane Management Platform{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cane: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                            950: '#052e16'
+                        },
+                        ambercane: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-6">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-cane-900 text-white shadow-md border-b border-cane-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand & Mobile Menu Toggle -->
+            <div class="flex items-center space-x-3">
+                <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg text-cane-200 hover:text-white hover:bg-cane-800 focus:outline-none" aria-label="Open Navigation">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-cane-500 flex items-center justify-center shadow text-white font-bold text-xl">
+                        <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center space-x-1">
+                            <span>Cane<span class="text-amber-400">Mart</span></span>
+                            <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cane-800 text-cane-300 ml-1">Pro</span>
+                        </div>
+                        <p class="text-[11px] text-cane-300 hidden sm:block -mt-1">Sugarcane & Fodder ERP</p>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden md:flex items-center space-x-1 lg:space-x-2">
+                <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if request.endpoint == 'dashboard' %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-gauge-high mr-1.5"></i>Dashboard
+                </a>
+                <a href="{{ url_for('purchases_list') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'purchase' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-cart-shopping mr-1.5"></i>Purchases
+                </a>
+                <a href="{{ url_for('sales_list') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'sale' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-truck-ramp-box mr-1.5"></i>Sales / Fodder
+                </a>
+                <a href="{{ url_for('suppliers_list') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'supplier' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-users mr-1.5"></i>Farmers
+                </a>
+                <a href="{{ url_for('customers_list') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'customer' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-cow mr-1.5"></i>Buyers
+                </a>
+                <a href="{{ url_for('payments_ledger') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'payment' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-wallet mr-1.5"></i>Ledger
+                </a>
+                <a href="{{ url_for('reports_page') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition {% if 'report' in request.endpoint %}bg-cane-800 text-white shadow-inner{% else %}text-cane-100 hover:bg-cane-800/60 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-file-excel mr-1.5 text-amber-300"></i>Reports
+                </a>
+            </nav>
+
+            <!-- Action buttons: Mobile Sync / QR + Excel Download -->
+            <div class="flex items-center space-x-2">
+                <button onclick="openMobileQrModal()" title="Open on Mobile via Wi-Fi QR" class="flex items-center space-x-1.5 bg-cane-800 hover:bg-cane-700 text-cane-100 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-medium border border-cane-700 transition shadow-sm">
+                    <i class="fa-solid fa-mobile-screen-button text-amber-400"></i>
+                    <span class="hidden sm:inline">Phone Sync</span>
+                </button>
+                <a href="{{ url_for('export_full_report') }}" title="Download Full Excel Audit Report" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow transition">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <span class="hidden md:inline">Export Excel</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Slide-out Drawer -->
+    <div id="mobileDrawer" class="fixed inset-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex">
+        <div class="w-72 bg-cane-950 text-white h-full shadow-2xl flex flex-col justify-between p-5">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-cane-800 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-seedling"></i>
+                        </div>
+                        <span class="font-extrabold text-lg">Cane<span class="text-amber-400">Mart</span></span>
+                    </div>
+                    <button id="closeDrawerBtn" class="text-cane-400 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="space-y-1.5">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if request.endpoint == 'dashboard' %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-gauge-high w-5 text-amber-400"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('purchases_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'purchase' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-cart-shopping w-5 text-emerald-400"></i>
+                        <span>Cane Purchases</span>
+                    </a>
+                    <a href="{{ url_for('sales_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'sale' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-truck-ramp-box w-5 text-blue-400"></i>
+                        <span>Sales / Animal Feed</span>
+                    </a>
+                    <a href="{{ url_for('suppliers_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'supplier' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-users w-5 text-teal-400"></i>
+                        <span>Farmers (Suppliers)</span>
+                    </a>
+                    <a href="{{ url_for('customers_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'customer' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-cow w-5 text-amber-400"></i>
+                        <span>Buyers (Feed & Mills)</span>
+                    </a>
+                    <a href="{{ url_for('payments_ledger') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'payment' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-wallet w-5 text-purple-400"></i>
+                        <span>Payment Ledger</span>
+                    </a>
+                    <a href="{{ url_for('transport_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'transport' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-truck-front w-5 text-yellow-400"></i>
+                        <span>Logistics & Vehicles</span>
+                    </a>
+                    <a href="{{ url_for('employees_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'employee' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-user-group w-5 text-pink-400"></i>
+                        <span>Staff & Attendance</span>
+                    </a>
+                    <a href="{{ url_for('reports_page') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {% if 'report' in request.endpoint %}bg-cane-800 text-white{% else %}text-cane-200 hover:bg-cane-900{% endif %}">
+                        <i class="fa-solid fa-file-excel w-5 text-green-400"></i>
+                        <span>Reports & Excel</span>
+                    </a>
+                </div>
+            </div>
+            <div class="pt-4 border-t border-cane-800 text-xs text-cane-400 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span>IP: {{ local_ip }}:{{ port }}</span>
+                    <button onclick="openMobileQrModal()" class="text-amber-400 font-bold hover:underline">QR Code</button>
+                </div>
+                <p>© {{ current_year }} CaneMart System</p>
+            </div>
+        </div>
+        <div id="drawerOverlay" class="flex-1 bg-black/50"></div>
+    </div>
+
+    <!-- Flash Notifications -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-3 p-3.5 rounded-xl flex items-center justify-between shadow-sm transition transform duration-200 
+                        {% if category == 'success' %}bg-emerald-100 text-emerald-900 border border-emerald-300
+                        {% elif category == 'danger' %}bg-red-100 text-red-900 border border-red-300
+                        {% elif category == 'info' %}bg-blue-100 text-blue-900 border border-blue-300
+                        {% else %}bg-amber-100 text-amber-900 border border-amber-300{% endif %}">
+                        <div class="flex items-center space-x-2.5 text-sm font-semibold">
+                            <i class="fa-solid {% if category == 'success' %}fa-circle-check text-emerald-600{% elif category == 'danger' %}fa-circle-exclamation text-red-600{% else %}fa-info-circle text-blue-600{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-slate-800 p-1">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Mobile Bottom Fixed Navigation Bar (App Experience) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg py-1.5 px-2 flex justify-around items-center">
+        <a href="{{ url_for('dashboard') }}" class="flex flex-col items-center py-1 px-2 rounded-lg {% if request.endpoint == 'dashboard' %}text-cane-700 font-bold{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+            <i class="fa-solid fa-gauge-high text-lg"></i>
+            <span class="text-[10px] mt-0.5">Home</span>
+        </a>
+        <a href="{{ url_for('purchases_list') }}" class="flex flex-col items-center py-1 px-2 rounded-lg {% if 'purchase' in request.endpoint %}text-cane-700 font-bold{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+            <i class="fa-solid fa-cart-shopping text-lg"></i>
+            <span class="text-[10px] mt-0.5">Purchase</span>
+        </a>
+        <a href="{{ url_for('sales_list') }}" class="flex flex-col items-center py-1 px-2 rounded-lg {% if 'sale' in request.endpoint %}text-cane-700 font-bold{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+            <i class="fa-solid fa-truck-ramp-box text-lg"></i>
+            <span class="text-[10px] mt-0.5">Sales</span>
+        </a>
+        <a href="{{ url_for('payments_ledger') }}" class="flex flex-col items-center py-1 px-2 rounded-lg {% if 'payment' in request.endpoint %}text-cane-700 font-bold{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+            <i class="fa-solid fa-wallet text-lg"></i>
+            <span class="text-[10px] mt-0.5">Ledger</span>
+        </a>
+        <a href="{{ url_for('reports_page') }}" class="flex flex-col items-center py-1 px-2 rounded-lg {% if 'report' in request.endpoint %}text-cane-700 font-bold{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+            <i class="fa-solid fa-file-excel text-lg text-emerald-600"></i>
+            <span class="text-[10px] mt-0.5">Excel</span>
+        </a>
+    </nav>
+
+    <!-- Modal: Open on Mobile Phone with QR Code -->
+    <div id="mobileQrModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100">
+            <div class="w-12 h-12 bg-cane-100 text-cane-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Use on Mobile Phone</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Connect phone to same Wi-Fi or hotspot and scan this QR code or type URL:</p>
+            
+            <div class="p-3 bg-slate-50 rounded-xl inline-block border border-slate-200 shadow-inner mb-4">
+                <div id="qrcode" class="flex justify-center"></div>
+            </div>
+
+            <div class="bg-cane-50 border border-cane-200 rounded-lg p-2.5 mb-4 text-xs font-mono font-bold text-cane-800 select-all break-all">
+                http://{{ local_ip }}:{{ port }}
+            </div>
+
+            <p class="text-[11px] text-slate-400 mb-4">Works on any smartphone browser (Chrome, Safari, Firefox). Responsive & fast!</p>
+
+            <button onclick="closeMobileQrModal()" class="w-full py-2.5 bg-cane-700 hover:bg-cane-800 text-white rounded-xl text-sm font-semibold transition">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Drawer toggle logic
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+        const drawerOverlay = document.getElementById('drawerOverlay');
+        const mobileDrawer = document.getElementById('mobileDrawer');
+
+        function toggleDrawer(open) {
+            if (open) {
+                mobileDrawer.classList.remove('-translate-x-full');
+            } else {
+                mobileDrawer.classList.add('-translate-x-full');
+            }
+        }
+
+        if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', () => toggleDrawer(true));
+        if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
+        if (drawerOverlay) drawerOverlay.addEventListener('click', () => toggleDrawer(false));
+
+        // QR Code Modal logic
+        let qrcodeGenerated = false;
+        function openMobileQrModal() {
+            const modal = document.getElementById('mobileQrModal');
+            modal.classList.remove('hidden');
+            if (!qrcodeGenerated) {
+                const qrUrl = "http://{{ local_ip }}:{{ port }}";
+                new QRCode(document.getElementById("qrcode"), {
+                    text: qrUrl,
+                    width: 170,
+                    height: 170,
+                    colorDark : "#14532d",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                qrcodeGenerated = true;
+            }
+        }
+
+        function closeMobileQrModal() {
+            document.getElementById('mobileQrModal').classList.add('hidden');
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

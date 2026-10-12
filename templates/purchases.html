@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Sugarcane Purchases - CaneMart{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2 text-cane-700 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span>Farmer Procurement Ledger</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Sugarcane Purchases</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Record cane weight, procurement rate, paid advances and pending farmer balance.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button onclick="openPurchaseModal()" class="flex-1 sm:flex-none px-4 py-2.5 bg-cane-700 hover:bg-cane-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-plus"></i>
+                <span>Record Purchase</span>
+            </button>
+            <a href="{{ url_for('export_purchases') }}" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs sm:text-sm shadow transition flex items-center space-x-1.5" title="Download Excel">
+                <i class="fa-solid fa-file-excel"></i>
+                <span class="hidden sm:inline">Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Procured</span>
+            <div class="text-lg sm:text-xl font-black text-slate-800 mt-0.5">{{ "{:,.1f}".format(stats.total_qty) }} <span class="text-xs font-normal text-slate-500">Tons</span></div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Bill Value</span>
+            <div class="text-lg sm:text-xl font-black text-slate-800 mt-0.5">₹{{ "{:,.0f}".format(stats.total_amt) }}</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Paid</span>
+            <div class="text-lg sm:text-xl font-black text-emerald-600 mt-0.5">₹{{ "{:,.0f}".format(stats.total_paid) }}</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Pending Payable</span>
+            <div class="text-lg sm:text-xl font-black text-orange-600 mt-0.5">₹{{ "{:,.0f}".format(stats.total_rem) }}</div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative w-full sm:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="searchPurchaseInput" onkeyup="filterPurchases()" placeholder="Search farmer, bill no, slip no..." class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-cane-500 focus:outline-none">
+        </div>
+        <div class="flex items-center space-x-2 w-full sm:w-auto text-xs">
+            <span class="text-slate-500 font-medium">Filter:</span>
+            <button onclick="filterStatus('all')" class="status-btn px-2.5 py-1 rounded-lg bg-cane-100 text-cane-800 font-bold">All</button>
+            <button onclick="filterStatus('Paid')" class="status-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-800 font-medium">Paid</button>
+            <button onclick="filterStatus('Partial')" class="status-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-800 font-medium">Partial</button>
+            <button onclick="filterStatus('Unpaid')" class="status-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-800 font-medium">Unpaid</button>
+        </div>
+    </div>
+
+    <!-- Purchases Table / Card View -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        
+        <!-- Desktop Table (md and up) -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left text-xs" id="purchasesTable">
+                <thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">Bill No / Date</th>
+                        <th class="py-3 px-4">Farmer (Supplier)</th>
+                        <th class="py-3 px-4">Variety</th>
+                        <th class="py-3 px-4 text-right">Quantity</th>
+                        <th class="py-3 px-4 text-right">Rate</th>
+                        <th class="py-3 px-4 text-right">Total Amount</th>
+                        <th class="py-3 px-4 text-right">Paid</th>
+                        <th class="py-3 px-4 text-right">Remaining</th>
+                        <th class="py-3 px-4 text-center">Status</th>
+                        <th class="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for p in purchases %}
+                    <tr class="purchase-row hover:bg-slate-50/70 transition" data-status="{{ p.payment_status }}">
+                        <td class="py-3.5 px-4">
+                            <span class="font-bold text-slate-900 font-mono">{{ p.bill_no }}</span>
+                            <div class="text-[11px] text-slate-400 mt-0.5">{{ p.purchase_date }}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-bold text-slate-900">{{ p.supplier_name }}</span>
+                            <div class="text-[11px] text-slate-500">
+                                {% if p.supplier_village %}{{ p.supplier_village }}{% else %}Farmer{% endif %}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-medium">
+                                {{ p.variety }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-black text-slate-800">
+                            {{ "{:,.2f}".format(p.quantity) }} <span class="text-[10px] text-slate-400 font-normal">{{ p.unit }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right text-slate-600 font-mono">
+                            ₹{{ "{:,.1f}".format(p.rate_per_unit) }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-black text-slate-900 font-mono">
+                            ₹{{ "{:,.2f}".format(p.total_amount) }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right text-emerald-600 font-bold font-mono">
+                            ₹{{ "{:,.2f}".format(p.paid_amount) }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-black font-mono {% if p.remaining_amount > 0 %}text-orange-600{% else %}text-slate-400{% endif %}">
+                            ₹{{ "{:,.2f}".format(p.remaining_amount) }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                {% if p.payment_status == 'Paid' %}bg-emerald-100 text-emerald-800
+                                {% elif p.payment_status == 'Partial' %}bg-amber-100 text-amber-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ p.payment_status }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center space-x-1.5">
+                                <a href="{{ url_for('purchase_receipt', purchase_id=p.id) }}" class="p-1.5 rounded-lg text-slate-500 hover:text-cane-700 hover:bg-slate-100 transition" title="Print Slip">
+                                    <i class="fa-solid fa-receipt text-sm"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_purchase', purchase_id=p.id) }}" onsubmit="return confirm('Delete this purchase bill?');" class="inline">
+                                    <button type="submit" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete">
+                                        <i class="fa-solid fa-trash text-sm"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="py-12 text-center text-slate-400 text-sm">No sugarcane purchases found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card List (under md) -->
+        <div class="md:hidden divide-y divide-slate-100" id="purchasesMobileList">
+            {% for p in purchases %}
+            <div class="p-4 hover:bg-slate-50 transition purchase-card" data-status="{{ p.payment_status }}">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="font-bold text-sm text-slate-900">{{ p.supplier_name }}</span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">{{ p.bill_no }}</span>
+                        </div>
+                        <div class="text-xs text-slate-400 mt-0.5">{{ p.purchase_date }} • {{ p.variety }}</div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                        {% if p.payment_status == 'Paid' %}bg-emerald-100 text-emerald-800
+                        {% elif p.payment_status == 'Partial' %}bg-amber-100 text-amber-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ p.payment_status }}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Quantity</span>
+                        <span class="font-bold text-slate-800">{{ p.quantity }} {{ p.unit }}</span>
+                        <span class="text-[10px] text-slate-400 block">@ ₹{{ p.rate_per_unit }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Total Bill</span>
+                        <span class="font-bold text-slate-900">₹{{ "{:,.0f}".format(p.total_amount) }}</span>
+                        <span class="text-[10px] text-emerald-600 block">Paid: ₹{{ "{:,.0f}".format(p.paid_amount) }}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-400 block">Remaining</span>
+                        <span class="font-black {% if p.remaining_amount > 0 %}text-orange-600{% else %}text-slate-400{% endif %}">
+                            ₹{{ "{:,.0f}".format(p.remaining_amount) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex items-center justify-between text-xs pt-2 border-t border-slate-50">
+                    <span class="text-slate-400 text-[11px]">Slip: {{ p.weighbridge_slip_no or '-' }}</span>
+                    <div class="flex items-center space-x-2">
+                        <a href="{{ url_for('purchase_receipt', purchase_id=p.id) }}" class="px-2.5 py-1 rounded-lg bg-cane-50 text-cane-700 font-bold hover:bg-cane-100">
+                            <i class="fa-solid fa-receipt mr-1"></i> Bill Slip
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- Modal: Record Sugarcane Purchase -->
+    <div id="purchaseModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 my-8">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Record Cane Purchase</h3>
+                        <p class="text-[11px] text-slate-500">Procure sugarcane from farmer / field</p>
+                    </div>
+                </div>
+                <button onclick="closePurchaseModal()" class="text-slate-400 hover:text-slate-700 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('add_purchase') }}" method="POST" class="space-y-4">
+                <!-- Farmer Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Select Farmer (Supplier) *</label>
+                    <select name="supplier_id" id="purSupplierSelect" onchange="handleFarmerChange(this.value)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-cane-500 focus:outline-none" required>
+                        <option value="">-- Choose Existing Farmer --</option>
+                        {% for s in suppliers %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.village or 'Field' }})</option>
+                        {% endfor %}
+                        <option value="new" class="font-bold text-emerald-700">+ Add New Farmer Now</option>
+                    </select>
+                </div>
+
+                <!-- New Farmer Inline Fields (Hidden by default) -->
+                <div id="newFarmerFields" class="hidden p-3 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-2.5">
+                    <span class="text-xs font-bold text-emerald-800 block">Quick New Farmer Registration</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" name="new_farmer_name" placeholder="Farmer Full Name *" class="w-full px-3 py-1.5 rounded-lg border border-emerald-300 text-xs bg-white">
+                        <input type="text" name="new_farmer_mobile" placeholder="Mobile Number" class="w-full px-3 py-1.5 rounded-lg border border-emerald-300 text-xs bg-white">
+                    </div>
+                    <input type="text" name="new_farmer_village" placeholder="Village / Farm Location" class="w-full px-3 py-1.5 rounded-lg border border-emerald-300 text-xs bg-white">
+                </div>
+
+                <!-- Purchase Date & Cane Variety -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Purchase Date *</label>
+                        <input type="date" name="purchase_date" value="{{ today_date }}" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Sugarcane Variety *</label>
+                        <select name="variety" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <option value="Co 86032">Co 86032 (Nira)</option>
+                            <option value="Co 0238">Co 0238 (Karan 4)</option>
+                            <option value="Co 0118">Co 0118 (Karan 2)</option>
+                            <option value="Co 09022">Co 09022</option>
+                            <option value="Co 15023">Co 15023</option>
+                            <option value="Co 05011">Co 05011</option>
+                            <option value="VSI 08005">VSI 08005</option>
+                            <option value="Other">Other Variety</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quantity & Rate per Unit -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Quantity *</label>
+                        <input type="number" step="0.01" min="0" name="quantity" id="purQty" oninput="calcPurchaseTotal()" placeholder="e.g. 25.5" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Unit</label>
+                        <select name="unit" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <option value="Tons">Tons</option>
+                            <option value="Quintals">Quintals</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Rate and Auto-calculated Total -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Rate (₹ / Ton) *</label>
+                        <input type="number" step="0.01" min="0" name="rate_per_unit" id="purRate" oninput="calcPurchaseTotal()" placeholder="e.g. 3150" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Total Bill Amount (₹)</label>
+                        <input type="number" step="0.01" id="purTotal" readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-xs font-black text-slate-900">
+                    </div>
+                </div>
+
+                <!-- Paid Amount & Remaining Balance -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-800 mb-1">Paid to Farmer Now (₹)</label>
+                            <input type="number" step="0.01" min="0" name="paid_amount" id="purPaid" oninput="calcPurchaseTotal()" placeholder="0.00" value="0" class="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs font-bold text-emerald-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orange-800 mb-1">Remaining Balance (₹)</label>
+                            <input type="number" step="0.01" id="purRem" readonly class="w-full px-3 py-2 rounded-xl border border-orange-200 bg-orange-50 text-xs font-black text-orange-800">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Payment Mode</label>
+                        <select name="payment_mode" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI (PhonePe, GPay, Paytm)</option>
+                            <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Vehicle & Weighbridge Slip -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Vehicle / Tractor No</label>
+                        <input type="text" name="vehicle_no" placeholder="e.g. MH-12-AB-1234" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Weighbridge Slip No</label>
+                        <input type="text" name="weighbridge_slip_no" placeholder="e.g. WB-9021" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Notes / Remarks</label>
+                    <input type="text" name="notes" placeholder="Optional notes" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closePurchaseModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-cane-700 hover:bg-cane-800 text-white rounded-xl text-xs font-bold shadow-md transition">
+                        Save Purchase Bill
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openPurchaseModal() {
+        document.getElementById('purchaseModal').classList.remove('hidden');
+    }
+    function closePurchaseModal() {
+        document.getElementById('purchaseModal').classList.add('hidden');
+    }
+
+    function handleFarmerChange(val) {
+        const newFields = document.getElementById('newFarmerFields');
+        if (val === 'new') {
+            newFields.classList.remove('hidden');
+        } else {
+            newFields.classList.add('hidden');
+        }
+    }
+
+    function calcPurchaseTotal() {
+        const qty = parseFloat(document.getElementById('purQty').value) || 0;
+        const rate = parseFloat(document.getElementById('purRate').value) || 0;
+        const total = qty * rate;
+        document.getElementById('purTotal').value = total.toFixed(2);
+
+        const paid = parseFloat(document.getElementById('purPaid').value) || 0;
+        const rem = Math.max(0, total - paid);
+        document.getElementById('purRem').value = rem.toFixed(2);
+    }
+
+    // Client-side search and filters
+    function filterPurchases() {
+        const query = document.getElementById('searchPurchaseInput').value.toLowerCase();
+        const rows = document.querySelectorAll('.purchase-row');
+        const cards = document.querySelectorAll('.purchase-card');
+
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            r.style.display = text.includes(query) ? '' : 'none';
+        });
+
+        cards.forEach(c => {
+            const text = c.innerText.toLowerCase();
+            c.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    function filterStatus(status) {
+        document.querySelectorAll('.status-btn').forEach(b => {
+            b.classList.remove('bg-cane-100', 'text-cane-800', 'font-bold');
+            b.classList.add('bg-slate-100', 'text-slate-600');
+        });
+        event.target.classList.remove('bg-slate-100', 'text-slate-600');
+        event.target.classList.add('bg-cane-100', 'text-cane-800', 'font-bold');
+
+        const rows = document.querySelectorAll('.purchase-row');
+        const cards = document.querySelectorAll('.purchase-card');
+
+        rows.forEach(r => {
+            if (status === 'all' || r.dataset.status === status) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+
+        cards.forEach(c => {
+            if (status === 'all' || c.dataset.status === status) {
+                c.style.display = '';
+            } else {
+                c.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

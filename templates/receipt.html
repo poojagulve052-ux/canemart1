@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Purchase Bill' if type == 'purchase' else 'Sale Invoice' }} - CaneMart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @media print {
+            body { background: white !important; padding: 0 !important; }
+            .no-print { display: none !important; }
+            .receipt-card { border: none !important; shadow: none !important; max-width: 100% !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 sm:p-8 flex flex-col items-center justify-center font-sans">
+
+    <!-- Action Bar (Buttons) -->
+    <div class="max-w-md w-full mb-4 flex items-center justify-between no-print">
+        <a href="javascript:history.back()" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center space-x-1">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back</span>
+        </a>
+        <div class="flex items-center space-x-2">
+            <button onclick="window.print()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow flex items-center space-x-1">
+                <i class="fa-solid fa-print"></i>
+                <span>Print</span>
+            </button>
+            <button onclick="shareOnWhatsApp()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow flex items-center space-x-1">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>WhatsApp</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Official Printable Slip -->
+    <div class="receipt-card bg-white max-w-md w-full rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-7 relative overflow-hidden text-slate-800">
+        <!-- Top Green Stripe -->
+        <div class="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-emerald-700 via-emerald-600 to-amber-500"></div>
+
+        <!-- Header -->
+        <div class="text-center pb-4 border-b border-slate-200 mt-2">
+            <div class="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center mx-auto mb-2 text-xl font-black shadow-sm">
+                <i class="fa-solid fa-seedling"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight text-slate-900">CANEMART TRADERS</h1>
+            <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-widest">Sugarcane Procurement & Animal Feed Supply</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">Admin: Ramesh Patil • Phone: 9876543210</p>
+        </div>
+
+        <!-- Slip Badge -->
+        <div class="my-4 flex items-center justify-between bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-100 text-xs">
+            <div>
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">{{ 'Bill No' if type == 'purchase' else 'Invoice No' }}</span>
+                <span class="font-black text-slate-900 font-mono">{{ item.bill_no if type == 'purchase' else item.invoice_no }}</span>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">Date</span>
+                <span class="font-bold text-slate-800">{{ item.purchase_date if type == 'purchase' else item.sale_date }}</span>
+            </div>
+        </div>
+
+        <!-- Party Information -->
+        <div class="mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+            <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                {{ 'Farmer (Supplier) Details' if type == 'purchase' else 'Customer / Buyer Details' }}
+            </span>
+            <div class="font-black text-sm text-slate-900">
+                {{ item.supplier_name if type == 'purchase' else item.customer_name }}
+            </div>
+            <div class="text-slate-600 mt-0.5 flex flex-wrap gap-2 text-[11px]">
+                {% if type == 'purchase' %}
+                    <span><i class="fa-solid fa-location-dot text-slate-400 mr-0.5"></i>{{ item.supplier_village or 'Field' }}</span>
+                    <span><i class="fa-solid fa-phone text-slate-400 mr-0.5"></i>{{ item.supplier_mobile or 'N/A' }}</span>
+                {% else %}
+                    <span><i class="fa-solid fa-location-dot text-slate-400 mr-0.5"></i>{{ item.customer_location or 'Location' }}</span>
+                    <span><i class="fa-solid fa-phone text-slate-400 mr-0.5"></i>{{ item.customer_mobile or 'N/A' }}</span>
+                    <span class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">{{ item.customer_type }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Cane Weight & Pricing Table -->
+        <div class="border border-slate-200 rounded-xl overflow-hidden mb-4 text-xs">
+            <div class="bg-slate-100 px-3 py-2 font-bold text-slate-700 flex justify-between">
+                <span>Description</span>
+                <span>Amount (₹)</span>
+            </div>
+            <div class="p-3 space-y-2">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-slate-900">Sugarcane: {{ item.variety }}</div>
+                        <div class="text-[11px] text-slate-500">
+                            {{ item.quantity }} {{ item.unit }} @ ₹{{ item.rate_per_unit }}/{{ item.unit }}
+                            {% if type == 'sale' and item.purpose %} ({{ item.purpose }}){% endif %}
+                        </div>
+                    </div>
+                    <div class="font-black text-slate-900">
+                        ₹{{ "{:,.2f}".format(item.total_amount) }}
+                    </div>
+                </div>
+
+                {% if item.vehicle_no %}
+                <div class="text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex justify-between">
+                    <span>Vehicle No: <b>{{ item.vehicle_no }}</b></span>
+                    {% if type == 'purchase' and item.weighbridge_slip_no %}
+                    <span>Weigh Slip: <b>{{ item.weighbridge_slip_no }}</b></span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Financial Totals Box -->
+            <div class="bg-slate-50 p-3 border-t border-slate-200 space-y-1.5 text-xs">
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Total Amount:</span>
+                    <span>₹{{ "{:,.2f}".format(item.total_amount) }}</span>
+                </div>
+                <div class="flex justify-between font-bold text-emerald-700">
+                    <span>{{ 'Paid to Farmer:' if type == 'purchase' else 'Payment Received:' }}</span>
+                    <span>₹{{ "{:,.2f}".format(item.paid_amount) }}</span>
+                </div>
+                <div class="flex justify-between font-black text-sm pt-1.5 border-t border-slate-200 {% if item.remaining_amount > 0 %}text-red-600{% else %}text-emerald-700{% endif %}">
+                    <span>{{ 'Balance Payable:' if type == 'purchase' else 'Balance Due:' }}</span>
+                    <span>₹{{ "{:,.2f}".format(item.remaining_amount) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {% if item.notes %}
+        <div class="text-[11px] text-slate-500 italic mb-4">
+            Remark: {{ item.notes }}
+        </div>
+        {% endif %}
+
+        <!-- Footer / Signatures -->
+        <div class="pt-6 border-t border-dashed border-slate-200 flex justify-between items-end text-[11px] text-slate-500">
+            <div class="text-center">
+                <div class="w-24 border-b border-slate-300 mb-1"></div>
+                <span>Party Signature</span>
+            </div>
+            <div class="text-center">
+                <div class="w-24 border-b border-slate-300 mb-1"></div>
+                <span class="font-bold text-slate-800">Authorized Sign</span>
+            </div>
+        </div>
+
+        <div class="text-center text-[10px] text-slate-400 mt-4">
+            Generated via CaneMart Digital Sugarcane ERP System
+        </div>
+    </div>
+
+    <script>
+        function shareOnWhatsApp() {
+            const isPurchase = "{{ type }}" === "purchase";
+            const party = isPurchase ? "{{ item.supplier_name }}" : "{{ item.customer_name }}";
+            const docNo = isPurchase ? "{{ item.bill_no }}" : "{{ item.invoice_no }}";
+            const date = isPurchase ? "{{ item.purchase_date }}" : "{{ item.sale_date }}";
+            const qty = "{{ item.quantity }} {{ item.unit }}";
+            const rate = "₹{{ item.rate_per_unit }}";
+            const total = "₹{{ '{:,.2f}'.format(item.total_amount) }}";
+            const paid = "₹{{ '{:,.2f}'.format(item.paid_amount) }}";
+            const rem = "₹{{ '{:,.2f}'.format(item.remaining_amount) }}";
+
+            const text = `🌾 *CANEMART SUGARCANE SLIP* 🌾\n` +
+                         `*${isPurchase ? 'Purchase Bill' : 'Sale Invoice'}:* ${docNo}\n` +
+                         `*Date:* ${date}\n` +
+                         `*Party:* ${party}\n` +
+                         `*Variety:* {{ item.variety }}\n` +
+                         `*Weight/Qty:* ${qty}\n` +
+                         `*Rate:* ${rate}\n` +
+                         `---------------------------\n` +
+                         `*Total Amount:* ${total}\n` +
+                         `*Paid/Advance:* ${paid}\n` +
+                         `*Balance Due:* ${rem}\n` +
+                         `---------------------------\n` +
+                         `*Thank you! CaneMart Sugarcane System*`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+        }
+    </script>
+</body>
+</html>

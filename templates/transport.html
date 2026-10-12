@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Transport & Logistics - CaneMart{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2 text-yellow-600 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-truck-front"></i>
+                <span>Logistics & Freight Management</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Transporters & Vehicles (DFD D5)</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Manage cane transport vehicles, driver contacts, trip routes, and freight payments.</p>
+        </div>
+
+        <button onclick="openTransportModal()" class="w-full sm:w-auto px-4 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-truck-fast"></i>
+            <span>Add Vehicle / Trip</span>
+        </button>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Trips</span>
+            <div class="text-xl font-black text-slate-800 mt-1">{{ stat.total_trips }} <span class="text-xs text-slate-400 font-normal">Trips</span></div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Freight Cost</span>
+            <div class="text-xl font-black text-slate-800 mt-1">₹{{ "{:,.2f}".format(stat.total_freight) }}</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase">Paid Freight</span>
+            <div class="text-xl font-black text-emerald-600 mt-1">₹{{ "{:,.2f}".format(stat.total_paid_freight) }}</div>
+        </div>
+    </div>
+
+    <!-- Transport Trips Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 bg-slate-50 border-b border-slate-200">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center space-x-2">
+                <i class="fa-solid fa-route text-yellow-600"></i>
+                <span>Vehicle Trips & Haulage Records</span>
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50/50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">Vehicle No</th>
+                        <th class="py-3 px-4">Driver & Phone</th>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Route (From &rarr; To)</th>
+                        <th class="py-3 px-4 text-right">Tons</th>
+                        <th class="py-3 px-4 text-right">Freight (₹)</th>
+                        <th class="py-3 px-4 text-center">Payment</th>
+                        <th class="py-3 px-4 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for t in transports %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-mono font-black text-slate-900">{{ t.vehicle_no }}</td>
+                        <td class="py-3 px-4">
+                            <span class="font-bold text-slate-800">{{ t.driver_name or 'Driver' }}</span>
+                            <div class="text-[11px] text-slate-400">{{ t.driver_phone or '-' }}</div>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600">{{ t.transport_date }}</td>
+                        <td class="py-3 px-4">
+                            <span class="font-medium text-slate-700">{{ t.from_location }}</span>
+                            <i class="fa-solid fa-arrow-right text-[10px] text-slate-400 mx-1"></i>
+                            <span class="font-medium text-slate-900">{{ t.to_location }}</span>
+                        </td>
+                        <td class="py-3 px-4 text-right font-black text-slate-800">{{ t.quantity }} Tons</td>
+                        <td class="py-3 px-4 text-right font-black text-slate-900">₹{{ "{:,.0f}".format(t.freight_amount) }}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                {% if t.freight_status == 'Paid' %}bg-emerald-100 text-emerald-800
+                                {% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {{ t.freight_status }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                                {{ t.trip_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="py-8 text-center text-slate-400">No transport records logged yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Add Transport Trip -->
+    <div id="transportModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-truck-front"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Add Transport Trip</h3>
+                        <p class="text-[11px] text-slate-500">Record vehicle freight and driver details</p>
+                    </div>
+                </div>
+                <button onclick="closeTransportModal()" class="text-slate-400 hover:text-slate-700 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('add_transport') }}" method="POST" class="space-y-3.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Vehicle No *</label>
+                        <input type="text" name="vehicle_no" placeholder="e.g. MH-12-RN-4589" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs uppercase font-bold" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Trip Date *</label>
+                        <input type="date" name="transport_date" value="{{ today_date }}" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Driver Name</label>
+                        <input type="text" name="driver_name" placeholder="Driver Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Driver Phone</label>
+                        <input type="text" name="driver_phone" placeholder="Mobile Number" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">From Location</label>
+                        <input type="text" name="from_location" placeholder="e.g. Baramati Farm" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">To Destination</label>
+                        <input type="text" name="to_location" placeholder="e.g. Kolhapur Dairy" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Quantity (Tons)</label>
+                        <input type="number" step="0.1" name="quantity" placeholder="e.g. 24.5" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Freight (₹)</label>
+                        <input type="number" step="1" name="freight_amount" placeholder="4500" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Paid (₹)</label>
+                        <input type="number" step="1" name="paid_freight" placeholder="4500" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Notes / Vehicle Type</label>
+                    <input type="text" name="notes" placeholder="e.g. 10 Wheeler Truck, Cane tied with net" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeTransportModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-xl text-xs font-bold shadow-md transition">
+                        Save Trip
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTransportModal() {
+        document.getElementById('transportModal').classList.remove('hidden');
+    }
+    function closeTransportModal() {
+        document.getElementById('transportModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

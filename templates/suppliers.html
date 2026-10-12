@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Sugarcane Farmers (Suppliers) - CaneMart{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2 text-cane-700 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-users"></i>
+                <span>Supplier Network</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Sugarcane Farmers (Suppliers)</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Register farmers, view total cane supplied, advance payments and pending balance dues.</p>
+        </div>
+
+        <button onclick="openSupplierModal()" class="w-full sm:w-auto px-4 py-2.5 bg-cane-700 hover:bg-cane-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Register New Farmer</span>
+        </button>
+    </div>
+
+    <!-- Farmer Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for s in suppliers %}
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition flex flex-col justify-between">
+            <div>
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-cane-100 text-cane-800 flex items-center justify-center font-black text-base">
+                            {{ s.name[:2]|upper }}
+                        </div>
+                        <div>
+                            <h3 class="font-black text-slate-900 text-sm sm:text-base leading-tight">{{ s.name }}</h3>
+                            <p class="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
+                                <i class="fa-solid fa-location-dot text-slate-400"></i>
+                                <span>{{ s.village or 'Field' }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    {% if s.total_balance_due > 0 %}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800">
+                        Pending
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Settled
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Phone</span>
+                        <a href="tel:{{ s.mobile }}" class="font-bold text-cane-700 hover:underline">
+                            <i class="fa-solid fa-phone mr-1 text-[10px]"></i>{{ s.mobile or 'N/A' }}
+                        </a>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Variety / Farm</span>
+                        <span class="font-bold text-slate-800">{{ s.cane_variety or 'Mixed' }} ({{ s.farm_area_acres }} ac)</span>
+                    </div>
+                </div>
+
+                <!-- Procurement & Balance Box -->
+                <div class="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Supplied</span>
+                        <span class="font-bold text-slate-800">{{ "{:,.1f}".format(s.total_supplied_qty) }} Tons</span>
+                        <span class="text-[10px] text-slate-400 block">₹{{ "{:,.0f}".format(s.total_bill_amt) }}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-400 block">Balance Due to Pay</span>
+                        <span class="font-black text-sm {% if s.total_balance_due > 0 %}text-orange-600{% else %}text-emerald-700{% endif %}">
+                            ₹{{ "{:,.0f}".format(s.total_balance_due) }}
+                        </span>
+                        <span class="text-[10px] text-emerald-600 block">Paid: ₹{{ "{:,.0f}".format(s.total_paid_amt) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <a href="{{ url_for('supplier_detail', supplier_id=s.id) }}" class="font-bold text-cane-700 hover:text-cane-900 flex items-center space-x-1">
+                    <span>View Full Ledger</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+                <form method="POST" action="{{ url_for('delete_supplier', supplier_id=s.id) }}" onsubmit="return confirm('Delete farmer {{ s.name }}?');">
+                    <button type="submit" class="text-slate-400 hover:text-red-600 p-1">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-3 py-12 text-center text-slate-400 text-sm">No sugarcane farmers registered yet.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Modal: Add New Sugarcane Farmer -->
+    <div id="supplierModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-cane-100 text-cane-700 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Register Sugarcane Farmer</h3>
+                        <p class="text-[11px] text-slate-500">Add new farmer supplier into CaneMart</p>
+                    </div>
+                </div>
+                <button onclick="closeSupplierModal()" class="text-slate-400 hover:text-slate-700 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('add_supplier') }}" method="POST" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Farmer Full Name *</label>
+                    <input type="text" name="name" placeholder="e.g. Shivaji Shinde" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-cane-500 focus:outline-none" required>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Number</label>
+                        <input type="text" name="mobile" placeholder="10-digit mobile" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Village / Location</label>
+                        <input type="text" name="village" placeholder="e.g. Baramati, Pune" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Cane Variety Cultivated</label>
+                        <input type="text" name="cane_variety" placeholder="e.g. Co 86032" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Farm Area (Acres)</label>
+                        <input type="number" step="0.1" name="farm_area_acres" placeholder="e.g. 10.5" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Bank / UPI Details (For Payment)</label>
+                    <input type="text" name="bank_details" placeholder="e.g. SBI A/c 38291048291, IFSC: SBIN0001234 or UPI ID" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeSupplierModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-cane-700 hover:bg-cane-800 text-white rounded-xl text-xs font-bold shadow-md transition">
+                        Save Farmer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openSupplierModal() {
+        document.getElementById('supplierModal').classList.remove('hidden');
+    }
+    function closeSupplierModal() {
+        document.getElementById('supplierModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}
